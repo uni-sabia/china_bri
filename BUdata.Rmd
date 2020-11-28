@@ -1,0 +1,142 @@
+---
+title: "Data from D.A.T.A"
+author: "UniLee"
+date: "2/16/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(foreign)
+library(tidyverse)
+```
+
+Consider the dataset from Boston University's D.A.T.A on Chinese Global Investment in Energy Sector. (Source: http://www.bu.edu/gdp/research/databases/)
+
+```{r}
+a<- read.csv("BU-PITCH-EN-2020.csv", stringsAsFactors=FALSE)
+```
+
+Clean the dataset and select BRI projects only.
+
+```{r}
+a <- a %>% rename(Amount=Amount...m.)
+b <- a %>% select(Country, Region, EnergySource, EnergySubSector, Lender, Amount, Description, BRI.Membership)
+# ab <- b[which(a$BRI.Membership==1),]
+# ab$BRI.Membership <- NULL
+```
+
+Total Amount of global BRI investment in energy sector is $183,421,000,000. 
+NOTE: The number provided by the Global China Investment Tracker is $109,700,000,000. The discrepancy comes from the fact that the Global China Investment Tracker excludes "troubled transactions" and "contracts". Compare the datasets here. https://www.aei.org/china-global-investment-tracker/
+
+```{r}
+sum(b$Amount)
+```
+
+Regional breakdown of BRI  projects
+
+```{r}
+Region_percent <- b %>% group_by(Region) %>% 
+  summarise(subtotal_region = sum(Amount)) %>% 
+  mutate(regional_share = subtotal_region/sum(subtotal_region)*100) %>% 
+  arrange(desc(regional_share))
+Region_percent
+```
+
+Breakdown of BRI projects by Technology
+
+```{r}
+Tech_percent <- b %>% group_by(EnergySource) %>% 
+  summarise(subtotal_tech = sum(Amount)) %>% 
+  mutate(tech_share = subtotal_tech/sum(subtotal_tech)*100) %>% 
+  arrange(desc(tech_share))
+
+Tech_percent
+
+Tech_pie <- b %>% group_by(EnergySource) %>% 
+  summarise(subtotal_tech = sum(Amount))
+techpiechart <- ggplot(Tech_pie,aes(x="", y=subtotal_tech, fill=EnergySource)) + 
+  geom_bar(width=1, stat="identity") + coord_polar("y") +
+  geom_text(aes(label = paste0(round(subtotal_tech/sum(subtotal_tech)*100), "%")), position = position_stack(vjust = 0.5)) + 
+  scale_fill_hue() + 
+  labs(x = NULL, y = NULL, fill = NULL, title = "Investment by Energy Source") + 
+  theme_classic() + theme(axis.line = element_blank(),
+                                    axis.text = element_blank(),
+                                    axis.ticks = element_blank(),
+                                    plot.title = element_text(hjust = 0.5, color = "#666666"))
+
+techpiechart
+```
+
+What kind of projects are there? 
+
+```{r}
+sector <- b %>% group_by(EnergySubSector) %>% 
+  summarise(subtotal_sector=sum(Amount)) %>% 
+  mutate(sector_share=subtotal_sector/sum(subtotal_sector)*100) %>% 
+  arrange(desc(sector_share))
+
+sector
+```
+```{r}
+sectorpie <- b %>% group_by(EnergySubSector) %>% 
+  summarise(subtotal_sector=sum(Amount))
+
+sectorpiechart <- ggplot(sectorpie,aes(x="", y=subtotal_sector, fill=EnergySubSector)) + 
+  geom_bar(width=1, stat="identity") + coord_polar("y") +
+  geom_text(aes(label = paste0(round(subtotal_sector/sum(subtotal_sector)*100), "%")), position = position_stack(vjust = 0.5)) + 
+  scale_fill_brewer() + 
+  labs(x = NULL, y = NULL, fill = NULL, title = "Investment by Energy Subsector") + 
+  theme_classic() + theme(axis.line = element_blank(),
+                                    axis.text = element_blank(),
+                                    axis.ticks = element_blank(),
+                                    plot.title = element_text(hjust = 0.5, color = "#666666"))
+sectorpiechart
+```
+
+
+
+The biggest BRI investment is made in Russia, in an exploration and extraction for oil.
+
+```{r}
+ab[which.max(ab$Amount),]
+```
+There is only one project in East Asia: grid project in Monolia. 
+```{r}
+ab %>% filter(Region=="East Asia")
+
+```
+The list of BRI solar and wind projects are as follows, in descending order. 
+
+```{r}
+ab %>% filter(EnergySource=="Solar" | EnergySource=="Wind") %>% arrange(desc(Amount))
+```
+China has 3 nuclear projects in Pakistan. 
+
+```{r}
+ab %>% filter(EnergySource=="Nuclear") %>% arrange(desc(Amount))
+```
+
+```{r}
+c <- a %>% select(Date, Amount) %>% 
+  group_by(Date) %>% summarise(annual_investment = sum(Amount)) 
+ggplot(c, aes(x=Date, y=annual_investment)) + geom_col() + xlab("Annual Investment") + ylab("Year")
+```
+
+Solar and Wind for all investments
+
+```{r}
+e<- read.csv("BU-PITCH-EN-2020.csv", stringsAsFactors=FALSE)
+e <- a %>% rename(Amount=Amount...m.)
+e <- a %>% select(Country, Region, EnergySource, EnergySubSector, Lender, Amount, Description, BRI.Membership)
+names(e)
+solarwind <- e %>% filter(EnergySource=="Solar" | EnergySource=="Wind") %>% arrange(desc(Amount))
+solarwind
+
+```
+
+
+

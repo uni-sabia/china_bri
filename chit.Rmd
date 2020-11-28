@@ -1,0 +1,63 @@
+---
+title: "CHIT"
+author: "UniLee"
+date: "2/21/2020"
+output: html_document
+---
+rm(list = ls())
+library(dplyr)
+library(stringr)
+library(foreign)
+a<-read.csv("chitfull.csv", skip=5, stringsAsFactors=F)
+
+a$Quantity.in.Millions <- str_replace_all(a$Quantity.in.Millions, ",", "")
+a$Quantity.in.Millions <- as.numeric(str_replace_all(a$Quantity.in.Millions, "\\$", ""))
+# a$Energy <- ifelse(a$Sector=="Energy", a$Quantity.in.Millions, NA)
+TotalInvestment <- sum(a$Quantity.in.Millions)
+
+BRI <- a %>% filter(BRI==1)
+TotalBRI <- sum(BRI$Quantity.in.Millions)
+
+```{r}
+TotalInvestment
+```
+```{r}
+TotalBRI
+```
+```{r}
+TotalBRI/TotalInvestment*100
+```
+Energy <- a %>% filter(Sector=="Energy")
+AllEnergy <- sum(Energy$Quantity.in.Millions)
+
+```{r}
+AllEnergy
+```
+```{r}
+AllEnergy/TotalInvestment*100
+```
+
+In which region are they investing in? 
+
+```{r}
+all_by_region <- a %>% group_by(Region) %>% 
+  summarise(region_subtotal=sum(Quantity.in.Millions),
+          energy_by_region=sum(Quantity.in.Millions[Sector=="Energy"])) %>% 
+  mutate(regionshare=region_subtotal/sum(region_subtotal)*100,
+         region_e_share=energy_by_region/sum(energy_by_region)*100) %>% 
+  arrange(desc(regionshare)) 
+
+all_by_region
+```
+
+In which sector are they investing in? 
+
+```{r}
+all_by_sector <- a %>% group_by(Sector) %>% 
+  summarise(sector_subtotal=sum(Quantity.in.Millions)) %>% 
+  mutate(sector_share=sector_subtotal/sum(sector_subtotal)*100) %>% 
+  arrange(desc(sector_share))
+all_by_sector
+```
+
+
